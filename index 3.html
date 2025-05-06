@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>햄구신교 상점</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #fffaf0;
+      color: #5c3a1e;
+      padding: 40px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 3em;
+    }
+    .item, .admin, .history, .leaderboard, .gift {
+      border: 2px solid #deb887;
+      border-radius: 12px;
+      margin: 20px auto;
+      padding: 20px;
+      width: 60%;
+      background-color: #fff6e6;
+    }
+    .item h2, .admin h2, .gift h2, .history h2, .leaderboard h2 {
+      margin-bottom: 10px;
+    }
+    .price {
+      font-weight: bold;
+      color: #b85b12;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #b85b12;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #ccc;
+    }
+    ul { text-align: left; }
+  </style>
+  <script>
+    function loadBalance() {
+      let username = prompt("당신의 이름(식별용)을 입력하세요:");
+      localStorage.setItem("hbc_user", username);
+      if (!localStorage.getItem("hbc_" + username)) {
+        localStorage.setItem("hbc_" + username, "1");
+        localStorage.setItem("log_" + username, "[]");
+      }
+      updateDisplay();
+      updateLeaderboard();
+      showHistory();
+    }
+
+    function getUser() {
+      return localStorage.getItem("hbc_user");
+    }
+
+    function getBalance(user) {
+      return parseFloat(localStorage.getItem("hbc_" + user) || "0");
+    }
+
+    function setBalance(user, amount) {
+      localStorage.setItem("hbc_" + user, amount.toFixed(1));
+    }
+
+    function updateDisplay() {
+      document.getElementById("balance").innerText = getBalance(getUser());
+    }
+
+    function buyItem(item, cost) {
+      let user = getUser();
+      let balance = getBalance(user);
+      if (balance >= cost) {
+        setBalance(user, balance - cost);
+        logPurchase(user, item, cost);
+        alert(item + " 구매 완료!");
+        updateDisplay();
+        showHistory();
+        updateLeaderboard();
+      } else {
+        alert("HBC가 부족합니다.");
+      }
+    }
+
+    function logPurchase(user, item, cost) {
+      let log = JSON.parse(localStorage.getItem("log_" + user) || "[]");
+      log.push(item + " - " + cost + " HBC");
+      localStorage.setItem("log_" + user, JSON.stringify(log));
+    }
+
+    function showHistory() {
+      let user = getUser();
+      let log = JSON.parse(localStorage.getItem("log_" + user) || "[]");
+      let histElem = document.getElementById("history");
+      histElem.innerHTML = "<h2>📜 구매 내역</h2>";
+      if (log.length === 0) {
+        histElem.innerHTML += "<p>구매 내역이 없습니다.</p>";
+      } else {
+        histElem.innerHTML += "<ul>" + log.map(item => "<li>" + item + "</li>").join("") + "</ul>";
+      }
+    }
+
+    function adminGrantCoins() {
+      const passcode = prompt("콤큐 권한 비밀번호를 입력하세요:");
+      if (passcode === "komq3244") {
+        const user = prompt("지급할 대상의 이름을 입력하세요:");
+        const amount = parseFloat(prompt("지급할 HBC 양을 입력하세요:"));
+        const current = getBalance(user);
+        setBalance(user, current + amount);
+        alert(amount + " HBC 지급 완료!");
+        if (user === getUser()) updateDisplay();
+        updateLeaderboard();
+      } else {
+        alert("비밀번호가 틀렸습니다.");
+      }
+    }
+
+    function giftCoins() {
+      const to = prompt("누구에게 선물하시겠습니까?");
+      const amount = parseFloat(prompt("얼마를 선물하시겠습니까?"));
+      const from = getUser();
+      const fromBal = getBalance(from);
+      if (fromBal >= amount && amount > 0) {
+        setBalance(from, fromBal - amount);
+        setBalance(to, getBalance(to) + amount);
+        alert(to + "에게 " + amount + " HBC를 선물했습니다!");
+        updateDisplay();
+        updateLeaderboard();
+      } else {
+        alert("잔액이 부족하거나 금액이 잘못되었습니다.");
+      }
+    }
+
+    function updateLeaderboard() {
+      let table = "<h2>🏆 코인 보유 순위</h2><ul>";
+      const users = Object.keys(localStorage)
+        .filter(k => k.startsWith("hbc_") && !k.includes("user"))
+        .map(k => ({ user: k.slice(4), balance: parseFloat(localStorage[k]) }))
+        .sort((a, b) => b.balance - a.balance)
+        .slice(0, 5);
+      users.forEach(u => table += `<li>${u.user}: ${u.balance} HBC</li>`);
+      table += "</ul>";
+      document.getElementById("leaderboard").innerHTML = table;
+    }
+  </script>
+</head>
+<body onload="loadBalance()">
+  <h1>🥓 햄구신교 상점 🥓</h1>
+  <p><strong><span id="balance">0</span> HBC</strong> 보유 중</p>
+
+  <div class="item">
+    <h2>🍎 황금사과</h2>
+    <p>영혼을 치유하는 신성한 과일</p>
+    <p class="price">가격: 2 HBC</p>
+    <button onclick="buyItem('황금사과', 2)">구매</button>
+  </div>
+
+  <div class="item">
+    <h2>🍯 럭잼</h2>
+    <p>행운의 효과를 부여합니다 (10~30%)</p>
+    <p class="price">가격: 4 HBC</p>
+    <button onclick="buyItem('럭잼', 4)">구매</button>
+  </div>
+
+  <div class="item">
+    <h2>⚗️ 경험치 병</h2>
+    <p>레벨업용 경험치 회복 병</p>
+    <p class="price">가격: 1 HBC</p>
+    <button onclick="buyItem('경험치 병', 1)">구매</button>
+  </div>
+
+  <div class="item">
+    <h2>🎟️ 이벤트 티켓</h2>
+    <p>한정 이벤트 참여용</p>
+    <p class="price">가격: 0.5 HBC</p>
+    <button onclick="buyItem('이벤트 티켓', 0.5)">구매</button>
+  </div>
+
+  <div class="gift">
+    <h2>🎁 코인 선물</h2>
+    <p>다른 신자에게 코인을 선물해 보세요</p>
+    <button onclick="giftCoins()">코인 선물</button>
+  </div>
+
+  <div class="admin">
+    <h2>🔑 콤큐의 권한</h2>
+    <p>관리자 전용: HBC 지급 기능</p>
+    <button onclick="adminGrantCoins()">HBC 지급</button>
+  </div>
+
+  <div id="leaderboard" class="leaderboard"></div>
+  <div id="history" class="history"></div>
+</body>
+</html>
